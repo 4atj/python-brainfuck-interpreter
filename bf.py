@@ -124,7 +124,7 @@ class PrintNode(Node):
     def exec(self, context: Context) -> None:
         print(end = chr(context.current_value))
 
-def brainfuck(code: bytes, input_data: bytes, buffer_size: int = 2 ** 16) -> None:
+def brainfuck(code: bytes, input_data: bytes = b"", buffer_size: int = 2 ** 16) -> None:
     source_code = SourceCodeStack(code)
     code_block = CodeBlockNode.parse(code = source_code) 
 
