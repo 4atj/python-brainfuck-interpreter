@@ -39,10 +39,10 @@ class Node:
         raise NotImplementedError
 
     def __str__(self) -> str:
-        return f"{self.__class__.__name__}"
+        return self.__class__.__name__
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}"
+        return self.__class__.__name__
 
 class CodeBlockNode(Node):
     def __init__(self, child_nodes: Sequence[Node]) -> None:
