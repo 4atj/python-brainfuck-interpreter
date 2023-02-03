@@ -114,11 +114,11 @@ class MinusNode(Node):
 
 class ForwardNode(Node):
     def exec(self, context: Context) -> None:
-        context.ptr += 1
+        context.pointer += 1
 
 class BackwardNode(Node):
     def exec(self, context: Context) -> None:
-        context.ptr -= 1
+        context.pointer -= 1
 
 class PrintNode(Node):
     def exec(self, context: Context) -> None:
