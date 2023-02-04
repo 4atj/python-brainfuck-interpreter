@@ -1,6 +1,6 @@
 from __future__ import annotations
 import sys
-from typing import Final, Sequence, TextIO, BinaryIO
+from typing import Sequence, TextIO, BinaryIO
 
 
 class SourceCodeStack:
