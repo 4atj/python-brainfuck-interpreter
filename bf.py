@@ -1,5 +1,7 @@
 from __future__ import annotations
-from typing import Sequence
+from typing import Sequence, TextIO, BinaryIO
+import sys
+import logging
 
 class SourceCodeStack:
     def __init__(self, code: bytes) -> None:
@@ -12,10 +14,52 @@ class SourceCodeStack:
         return bool(self.code)
 
 class Context:
-    def __init__(self, buffer_size: int = 2 ** 16, data: bytes = b"") -> None:
-        self.buffer = bytearray(data) + bytearray([0]) * (buffer_size - len(data))
+    def __init__(self, 
+            input_file:  TextIO | BinaryIO | None = sys.stdin, 
+            output_file: TextIO | BinaryIO = sys.stdout,
+            buffer_size: int = 2 ** 16,
+            num_cycles_limit: int = 2 ** 24) -> None:
+            
+        self.buffer = bytearray([0]) * buffer_size
         self.ptr = 0
 
+        self.input_file = input_file
+        self.output_file = output_file
+
+        self.num_cycles_left = num_cycles_limit
+
+    def exec(self, node: Node):
+        if self.num_cycles_left == 0:
+            self.write(b"\nExecution Timeout!")
+            raise TimeoutError
+
+        self.num_cycles_left -= 1
+        node.exec(self)
+
+    def read(self, n: int = -1, /) -> bytes:
+        if self.input_file is None:
+            return b"\0"
+
+        if isinstance(self.input_file, BinaryIO):
+            return self.input_file.read(n)
+
+        return bytes(map(ord,self.input_file.read(n)))
+
+    def write(self, bytes_: bytes, /) -> None:
+        from io import TextIOWrapper
+
+        # TODO XXX
+        if ( isinstance(self.output_file, TextIO) or
+             isinstance(self.output_file, TextIOWrapper) ):
+            
+            string_ = "".join(map(chr,bytes_))
+            self.output_file.write(string_)
+
+        else:
+            self.output_file.write(bytes_)
+
+        self.output_file.flush()
+        
     @property
     def current_value(self) -> int:
         return self.buffer[self.ptr]
@@ -39,24 +83,27 @@ class Node:
         raise NotImplementedError
 
     def __str__(self) -> str:
-        return self.__class__.__name__
+        return f"{self.__class__.__name__}"
 
     def __repr__(self) -> str:
-        return self.__class__.__name__
+        return f"{self.__class__.__name__}"
 
 class CodeBlockNode(Node):
     def __init__(self, child_nodes: Sequence[Node]) -> None:
         self.child_nodes = tuple(child_nodes)
 
     @classmethod
-    def parse(cls, code: SourceCodeStack, nested: bool = False) -> CodeBlockNode:
+    def parse(cls, code: SourceCodeStack) -> CodeBlockNode:
         child_nodes = []
 
         while code:
             token = code.read_next_token()
 
-            if token == b".":
+            if   token == b".":
                 new_node = PrintNode()
+
+            elif token == b",":
+                new_node = ReadNode()
 
             elif token == b"+":
                 new_node = PlusNode()
@@ -71,9 +118,9 @@ class CodeBlockNode(Node):
                 new_node = BackwardNode()
 
             elif token == b"[":
-                new_node = WhileNode(CodeBlockNode.parse(code, nested = True))
+                new_node = WhileNode(CodeBlockNode.parse(code))
 
-            elif nested and token == b"]":
+            elif token == b"]":
                 break
             
             else:
@@ -85,7 +132,7 @@ class CodeBlockNode(Node):
 
     def exec(self, context: Context) -> None:
         for child_node in self.child_nodes:
-            child_node.exec(context)
+            context.exec(child_node)
 
     def __str__(self) -> str:
         return f"{self.__class__.__name__}: {self.child_nodes}"
@@ -99,7 +146,7 @@ class WhileNode(Node):
 
     def exec(self, context: Context) -> None:
         while context.current_value:
-            self.code_block_node.exec(context)
+            context.exec(self.code_block_node)
 
     def __str__(self) -> str:
         return f"{self.__class__.__name__} ({self.code_block_node}, )"
@@ -122,14 +169,27 @@ class BackwardNode(Node):
 
 class PrintNode(Node):
     def exec(self, context: Context) -> None:
-        print(end = chr(context.current_value))
+        context.write(bytes([context.current_value]))
 
-def brainfuck(code: bytes, input_data: bytes = b"", buffer_size: int = 2 ** 16) -> None:
+class ReadNode(Node):
+    def exec(self, context: Context) -> None:
+        context.current_value = ord(context.read(1))
+
+def brainfuck(code: bytes, 
+        input_file: TextIO | BinaryIO | None = sys.stdin,
+        output_file: TextIO | BinaryIO = sys.stdout,
+        buffer_size: int = 2 ** 16, num_cycles_limit: int = 2 ** 20):
+
     source_code = SourceCodeStack(code)
     code_block = CodeBlockNode.parse(code = source_code) 
 
-    context = Context(buffer_size = buffer_size, data = input_data)
-    code_block.exec(context = context)
+    context = Context(input_file = input_file, output_file = output_file, buffer_size = buffer_size, num_cycles_limit = num_cycles_limit)
+
+    try:
+        context.exec(code_block)
+
+    except TimeoutError:
+        logging.warn("Execution Timeout!")
 
 if __name__ == "__main__":
-    brainfuck(code = b"[.>]", input_data = input().encode())
+    brainfuck(code = b"+[>,.]")
