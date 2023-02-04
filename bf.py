@@ -1,8 +1,5 @@
 from __future__ import annotations
-
 import sys
-import logging
-
 from typing import Final, Sequence, TextIO, BinaryIO
 
 
