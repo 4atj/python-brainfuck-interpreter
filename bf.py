@@ -33,7 +33,6 @@ class Context:
 
     def exec(self, node: Node):
         if self.num_cycles_left == 0:
-            self.write(b"\nExecution Timeout!")
             raise TimeoutError
 
         self.num_cycles_left -= 1
@@ -182,7 +181,7 @@ class ReadNode(Node):
 def brainfuck(code:  bytes, 
         input_file:  TextIO | BinaryIO | None = sys.stdin,
         output_file: TextIO | BinaryIO = sys.stdout,
-        buffer_size: int = 2 ** 16, num_cycles_limit: int = 2 ** 24):
+        buffer_size: int = 2 ** 16, num_cycles_limit: int = 2 ** 20):
 
     source_code = SourceCodeStack(code)
     code_block = CodeBlockNode.parse(code = source_code) 
