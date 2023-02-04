@@ -49,7 +49,7 @@ class CodeBlockNode(Node):
         self.child_nodes = tuple(child_nodes)
 
     @classmethod
-    def parse(cls, code: SourceCodeStack) -> CodeBlockNode:
+    def parse(cls, code: SourceCodeStack, nested: bool = False) -> CodeBlockNode:
         child_nodes = []
 
         while code:
@@ -71,9 +71,9 @@ class CodeBlockNode(Node):
                 new_node = BackwardNode()
 
             elif token == b"[":
-                new_node = WhileNode(CodeBlockNode.parse(code))
+                new_node = WhileNode(CodeBlockNode.parse(code, nested = True))
 
-            elif token == b"]":
+            elif nested and token == b"]":
                 break
             
             else:
