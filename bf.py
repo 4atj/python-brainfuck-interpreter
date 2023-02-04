@@ -1,7 +1,10 @@
 from __future__ import annotations
-from typing import Sequence, TextIO, BinaryIO
+
 import sys
 import logging
+
+from typing import Final, Sequence, TextIO, BinaryIO
+
 
 class SourceCodeStack:
     def __init__(self, code: bytes) -> None:
@@ -38,7 +41,7 @@ class Context:
 
     def read(self, n: int = -1, /) -> bytes:
         if self.input_file is None:
-            return b"\0"
+            return b""
 
         if isinstance(self.input_file, BinaryIO):
             return self.input_file.read(n)
@@ -46,11 +49,12 @@ class Context:
         return bytes(map(ord,self.input_file.read(n)))
 
     def write(self, bytes_: bytes, /) -> None:
-        from io import TextIOWrapper
+        from io import TextIOWrapper, StringIO
 
         # TODO XXX
         if ( isinstance(self.output_file, TextIO) or
-             isinstance(self.output_file, TextIOWrapper) ):
+             isinstance(self.output_file, TextIOWrapper) or
+             isinstance(self.output_file, StringIO)):
             
             string_ = "".join(map(chr,bytes_))
             self.output_file.write(string_)
@@ -173,10 +177,10 @@ class PrintNode(Node):
 
 class ReadNode(Node):
     def exec(self, context: Context) -> None:
-        context.current_value = ord(context.read(1))
+        context.current_value = ord(context.read(1) or b"\0")
 
-def brainfuck(code: bytes, 
-        input_file: TextIO | BinaryIO | None = sys.stdin,
+def brainfuck(code:  bytes, 
+        input_file:  TextIO | BinaryIO | None = sys.stdin,
         output_file: TextIO | BinaryIO = sys.stdout,
         buffer_size: int = 2 ** 16, num_cycles_limit: int = 2 ** 20):
 
