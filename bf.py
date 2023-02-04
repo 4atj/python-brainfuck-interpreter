@@ -181,18 +181,15 @@ class ReadNode(Node):
 def brainfuck(code:  bytes, 
         input_file:  TextIO | BinaryIO | None = sys.stdin,
         output_file: TextIO | BinaryIO = sys.stdout,
-        buffer_size: int = 2 ** 16, num_cycles_limit: int = 2 ** 20):
+        buffer_size: int = 2 ** 16, num_cycles_limit: int = 2 ** 24):
+
+    
+    context = Context(input_file = input_file, output_file = output_file, buffer_size = buffer_size, num_cycles_limit = num_cycles_limit)
 
     source_code = SourceCodeStack(code)
     code_block = CodeBlockNode.parse(code = source_code) 
 
-    context = Context(input_file = input_file, output_file = output_file, buffer_size = buffer_size, num_cycles_limit = num_cycles_limit)
-
-    try:
-        context.exec(code_block)
-
-    except TimeoutError:
-        logging.warn("Execution Timeout!")
+    context.exec(code_block)
 
 if __name__ == "__main__":
     brainfuck(code = b"+[>,.]")
