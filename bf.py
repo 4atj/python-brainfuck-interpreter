@@ -3,12 +3,15 @@ import sys
 from typing import Sequence, TextIO, BinaryIO
 
 
-class SourceCodeStack:
+class SourceCode:
     def __init__(self, code: bytes) -> None:
-        self.code = bytearray(reversed(code))
+        self.code = code
+        self.ptr = 0
 
     def read_next_token(self) -> bytes:
-        return bytes([self.code.pop()])
+        token = self.code[self.ptr:self.ptr+1]
+        self.ptr += 1
+        return token
 
     def __bool__(self) -> bool:
         return bool(self.code)
@@ -93,12 +96,10 @@ class CodeBlockNode(Node):
         self.child_nodes = tuple(child_nodes)
 
     @classmethod
-    def parse(cls, code: SourceCodeStack) -> CodeBlockNode:
+    def parse(cls, source_code: SourceCode) -> CodeBlockNode:
         child_nodes = []
 
-        while code:
-            token = code.read_next_token()
-
+        while token := source_code.read_next_token():
             if   token == b".":
                 new_node = PrintNode()
 
@@ -118,7 +119,7 @@ class CodeBlockNode(Node):
                 new_node = BackwardNode()
 
             elif token == b"[":
-                new_node = WhileNode(CodeBlockNode.parse(code))
+                new_node = WhileNode(CodeBlockNode.parse(source_code))
 
             elif token == b"]":
                 break
@@ -175,18 +176,15 @@ class ReadNode(Node):
     def exec(self, context: Context) -> None:
         context.current_value = ord(context.read(1) or b"\0")
 
-def brainfuck(code:  bytes, 
+def brainfuck(
+        source_code: bytes, 
         input_file:  TextIO | BinaryIO | None = sys.stdin,
         output_file: TextIO | BinaryIO = sys.stdout,
         buffer_size: int = 2 ** 16, num_cycles_limit: int = 2 ** 24):
 
-    
     context = Context(input_file = input_file, output_file = output_file, buffer_size = buffer_size, num_cycles_limit = num_cycles_limit)
-
-    source_code = SourceCodeStack(code)
-    code_block = CodeBlockNode.parse(code = source_code) 
-
+    code_block = CodeBlockNode.parse(source_code = SourceCode(source_code))
     context.exec(code_block)
 
 if __name__ == "__main__":
-    brainfuck(code = b"+[>,.]")
+    brainfuck(b"+[>,.]")
